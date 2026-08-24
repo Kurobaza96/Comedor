@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Comedor El Jornalero — Pedidos</title>
+<title>Comedor Doña Chelo — Pedidos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -253,6 +253,30 @@
     box-shadow:0 3px 0 var(--pizarra-dark);
   }
   .btn-status:active{transform:translateY(2px); box-shadow:none;}
+  .addition-tag{
+    font-family:'Space Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    color:var(--achiote-dark);
+    background:rgba(232,169,59,.35);
+    padding:2px 7px;
+    border-radius:999px;
+    vertical-align:middle;
+    margin-left:4px;
+  }
+  .btn-delete-order{
+    background:transparent;
+    border:1.5px solid rgba(43,38,33,.25);
+    color:var(--achiote-dark);
+    width:26px; height:26px;
+    border-radius:50%;
+    font-size:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:none;
+  }
+  .btn-delete-order:hover{border-color:var(--achiote); background:rgba(193,68,45,.08);}
 
   /* ---------- LAYOUT ---------- */
   .layout{
@@ -327,7 +351,7 @@
   }
   .delivered-table{
     width:100%;
-    min-width:850px;
+    min-width:970px;
     border-collapse:collapse;
     background:var(--papel);
     color:var(--tinta);
@@ -402,6 +426,88 @@
     border:1.5px solid var(--sage);
   }
   .paid-toggle.pagado:hover{opacity:.85;}
+  .paid-toggle.disponible{
+    background:var(--sage);
+    color:var(--tiza);
+    border:1.5px solid var(--sage);
+  }
+  .paid-toggle.disponible:hover{opacity:.85;}
+  .paid-toggle.agotado{
+    background:rgba(193,68,45,.12);
+    color:var(--achiote-dark);
+    border:1.5px solid var(--achiote);
+  }
+  .paid-toggle.agotado:hover{background:rgba(193,68,45,.22);}
+
+  /* ---------- GESTIONAR MENÚ ---------- */
+  .menu-manage-view{
+    max-width:900px;
+    margin:30px auto 0;
+    padding:0 20px;
+  }
+  .manage-cat-title{
+    font-family:'Kalam', cursive;
+    font-weight:700;
+    font-size:19px;
+    color:var(--tiza);
+    margin:22px 0 8px;
+  }
+  .manage-cat-title:first-child{margin-top:0;}
+  .manage-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:var(--papel);
+    color:var(--tinta);
+    border-radius:8px;
+    padding:12px 16px;
+    margin-bottom:8px;
+    box-shadow:0 3px 8px rgba(0,0,0,.18);
+  }
+  .manage-row.sold-out{opacity:.6;}
+  .manage-row-icon{font-size:20px; flex:none;}
+  .manage-row-info{flex:1; min-width:0;}
+  .manage-row-name{font-weight:700; font-size:14px;}
+  .manage-row-desc{font-size:12px; color:#5b5346; margin-top:1px;}
+  .manage-row-price{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    flex:none;
+  }
+  .manage-empty{
+    text-align:center;
+    color:var(--tiza-dim);
+    padding:40px 20px;
+    border:1.5px dashed rgba(242,238,221,.3);
+    border-radius:10px;
+  }
+  .btn-add-more{
+    background:var(--pizarra);
+    color:var(--tiza);
+    border:none;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:11.5px;
+    font-weight:600;
+    box-shadow:0 3px 0 var(--pizarra-dark);
+    white-space:nowrap;
+  }
+  .btn-add-more:active{transform:translateY(2px); box-shadow:none;}
+  .add-items-row{
+    display:grid;
+    grid-template-columns: 1fr auto auto;
+    align-items:center;
+    gap:8px;
+    padding:7px 0;
+    border-bottom:1px dashed var(--papel-sombra);
+  }
+  .add-items-cat{
+    font-family:'Kalam', cursive;
+    font-weight:700;
+    font-size:15px;
+    margin:12px 0 2px;
+  }
+  .add-items-cat:first-child{margin-top:0;}
 
   /* ---------- MENU CARDS ---------- */
   .menu-grid{
@@ -422,6 +528,35 @@
   .card:hover, .card:focus-within{
     transform:rotate(0deg) translateY(-3px);
     box-shadow:0 12px 20px rgba(0,0,0,.32), 0 1px 0 rgba(255,255,255,.4) inset;
+  }
+  .card.sold-out{
+    opacity:.6;
+    filter:grayscale(.5);
+  }
+  .card.sold-out:hover{transform:rotate(var(--rot,0deg)); }
+  .sold-out-ribbon{
+    position:absolute;
+    top:14px; right:-30px;
+    background:var(--achiote-dark);
+    color:var(--tiza);
+    font-family:'Space Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.06em;
+    padding:4px 34px;
+    transform:rotate(28deg);
+    box-shadow:0 2px 4px rgba(0,0,0,.3);
+    z-index:2;
+  }
+  .btn-sold-out{
+    background:transparent;
+    border:1.5px dashed rgba(43,38,33,.35);
+    color:#8a8172;
+    padding:7px 14px;
+    border-radius:999px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:default;
   }
   .tape{
     position:absolute;
@@ -848,6 +983,8 @@
     .main-tab{padding:9px 14px; font-size:12.5px;}
     .orders-rail{padding-left:22px; margin-left:2px;}
     .order-ticket::before{left:-30px;}
+    .manage-row{flex-wrap:wrap;}
+    .delivered-header{flex-direction:column; align-items:stretch;}
   }
   @media (prefers-reduced-motion: reduce){
     *{transition:none !important; animation:none !important;}
@@ -860,12 +997,12 @@
 
   <header>
     <p class="eyebrow">Pedidos para hoy</p>
-    <h1>Comedor El Jornalero</h1>
-    <p class="tagline">Comida Casera</p>
+    <h1>Comedor Doña Chelo</h1>
+    <p class="tagline">Comida casera, como en casa</p>
     <div class="meta-row">
       <span id="fechaHoy">—</span>
-      <span>Lun–Sáb · 7:00 a 18:00</span>
-      <span>Zona 11, Guatemala</span>
+      <span>Lun–Sáb · 7:00 a 16:00</span>
+      <span>Zona 1, Guatemala</span>
     </div>
   </header>
 
@@ -873,6 +1010,7 @@
     <button class="main-tab active" data-view="ordenar">🍽️ Ordenar</button>
     <button class="main-tab" data-view="pedidos">🧾 Pedidos enviados <span class="badge" id="ordersBadge" hidden>0</span></button>
     <button class="main-tab" data-view="entregados">✅ Entregados <span class="badge" id="deliveredBadge" hidden>0</span></button>
+    <button class="main-tab" data-view="menu">🍲 Menú</button>
   </nav>
 
   <div id="ordenarView">
@@ -926,11 +1064,24 @@
             <th>Total</th>
             <th>Pago</th>
             <th>Notas</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="deliveredContent"></tbody>
       </table>
     </div>
+  </section>
+
+  <section class="menu-manage-view" id="menuManageView" hidden aria-label="Gestionar menú">
+    <div class="delivered-header">
+      <div>
+        <p class="eyebrow">Administración</p>
+        <h2>Gestionar menú</h2>
+        <p>Agregá productos nuevos o marcá como agotado lo que ya no tengas hoy.</p>
+      </div>
+      <button class="btn-primary" id="btnOpenAddProduct" style="flex:none;">+ Agregar producto</button>
+    </div>
+    <div id="menuManageList"></div>
   </section>
 
   <button class="fab" id="fabCart">
@@ -1052,6 +1203,63 @@ function doPost(e) {
     </div>
   </div>
 
+  <!-- ADD PRODUCT MODAL -->
+  <div class="modal-overlay" id="addProductOverlay">
+    <div class="modal">
+      <h2>Nuevo producto</h2>
+      <p class="sub">Se agrega al menú y ya lo pueden pedir de inmediato.</p>
+
+      <div class="form-group">
+        <label for="prodName">Nombre</label>
+        <input type="text" id="prodName" placeholder="Ej. Tamalito de chipilín">
+        <p class="error-text" id="errProdName">Escribí el nombre del producto.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="prodCat">Categoría</label>
+        <select id="prodCat" style="width:100%; border:1.5px solid var(--papel-sombra); background:#fff; padding:10px 11px; border-radius:4px; font-family:'Work Sans', sans-serif; font-size:14px; color:var(--tinta);"></select>
+      </div>
+
+      <div class="form-group">
+        <label for="prodPrice">Precio (Q)</label>
+        <input type="text" id="prodPrice" inputmode="decimal" placeholder="Ej. 15">
+        <p class="error-text" id="errProdPrice">Ingresá un precio válido.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="prodDesc">Descripción (opcional)</label>
+        <textarea id="prodDesc" placeholder="Breve descripción del platillo"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="prodIcon">Ícono (opcional)</label>
+        <input type="text" id="prodIcon" placeholder="🍽️" maxlength="4">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btnCancelAddProduct">Cancelar</button>
+        <button class="btn-primary" id="btnConfirmAddProduct">Agregar al menú</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD ITEMS MODAL -->
+  <div class="modal-overlay" id="addItemsOverlay">
+    <div class="modal">
+      <h2>Agregar productos</h2>
+      <p class="sub" id="addItemsSub">Pedido #000</p>
+      <div id="addItemsList" style="max-height:320px; overflow-y:auto; margin-bottom:14px;"></div>
+      <div class="ticket-total" style="margin:0 0 14px; padding:10px 0 0; border-top:2px solid var(--tinta);">
+        <span class="label">Subtotal a agregar</span>
+        <span class="amount" id="addItemsSubtotal">Q0</span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btnCancelAddItems">Cancelar</button>
+        <button class="btn-primary" id="btnConfirmAddItems" disabled>Agregar al pedido</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CONFIRMATION MODAL -->
   <div class="modal-overlay" id="confirmOverlay">
     <div class="modal">
@@ -1068,7 +1276,7 @@ function doPost(e) {
 
 <script>
   // ---------------- DATA ----------------
-  const menuData = [
+  let menuData = [
     {id:1, cat:"Plato del día", icon:"🍗", name:"Pepián de pollo", desc:"Pollo en salsa de semillas tostadas y chile, con arroz.", price:38},
     {id:2, cat:"Plato del día", icon:"🍲", name:"Jocón de pollo", desc:"Pollo en salsa verde de tomate, cilantro y miltomate.", price:38},
     {id:3, cat:"Plato del día", icon:"🥣", name:"Caldo de res", desc:"Costilla, elote, güisquil y yuca en caldo caliente.", price:40},
@@ -1121,6 +1329,26 @@ function doPost(e) {
   const fmt = n => "Q" + n;
 
   function itemById(id){ return menuData.find(m => m.id === id); }
+  function isAvailable(item){ return item.available !== false; }
+
+  function loadLocalMenu(){
+    try {
+      const saved = JSON.parse(localStorage.getItem("comedor_menu") || "null");
+      if(Array.isArray(saved) && saved.length){
+        menuData = saved;
+      }
+    } catch(err){
+      // si algo falla, se sigue usando el menú por defecto ya cargado en memoria
+    }
+  }
+
+  function saveLocalMenu(){
+    try {
+      localStorage.setItem("comedor_menu", JSON.stringify(menuData));
+    } catch(err){
+      console.warn("No se pudo guardar el menú localmente.", err);
+    }
+  }
 
   function cartTotal(){
     return Object.entries(cart).reduce((sum,[id,qty]) => sum + itemById(Number(id)).price * qty, 0);
@@ -1274,6 +1502,7 @@ function doPost(e) {
   const ordenarView = $("#ordenarView");
   const ordersView = $("#ordersView");
   const deliveredView = $("#deliveredView");
+  const menuManageView = $("#menuManageView");
   const fabCartBtn = $("#fabCart");
 
   function setView(view){
@@ -1284,6 +1513,7 @@ function doPost(e) {
     ordenarView.hidden = view !== "ordenar";
     ordersView.hidden = view !== "pedidos";
     deliveredView.hidden = view !== "entregados";
+    menuManageView.hidden = view !== "menu";
     fabCartBtn.classList.toggle("view-hidden", view !== "ordenar");
 
     if(view === "pedidos"){
@@ -1294,6 +1524,11 @@ function doPost(e) {
     if(view === "entregados"){
       closeSheet();
       renderDelivered();
+    }
+
+    if(view === "menu"){
+      closeSheet();
+      renderMenuManage();
     }
   }
   document.querySelectorAll(".main-tab").forEach(btn => {
@@ -1337,22 +1572,30 @@ function doPost(e) {
       card.className = "order-ticket";
       card.style.setProperty("--rot", rot + "deg");
 
-      const itemsHtml = order.items.map(it =>
+      // lo que hay que preparar ahora: la tanda actual (pedido nuevo o adición pendiente)
+      const batch = order.currentBatch || { items: order.items, total: order.total };
+      const isAddition = order.everDelivered;
+
+      const itemsHtml = batch.items.map(it =>
         `<div><span>${it.icon || "🍽️"} ${it.qty} × ${it.name}</span><span>${fmt(it.price * it.qty)}</span></div>`
       ).join("");
 
       const actionHtml = `<button class="btn-status" data-num="${order.num}">${nextActionLabel[order.status]}</button>`;
+      const additionTag = isAddition ? `<span class="addition-tag">➕ Adición</span>` : "";
 
       card.innerHTML = `
         <div class="order-head">
-          <span class="order-num">${order.num}</span>
-          <span class="status-badge ${order.status}">${statusLabel[order.status]}</span>
+          <span class="order-num">${order.num} ${additionTag}</span>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span class="status-badge ${order.status}">${statusLabel[order.status]}</span>
+            <button class="btn-delete-order" data-num="${order.num}" aria-label="Eliminar pedido" title="Eliminar pedido">🗑️</button>
+          </span>
         </div>
         <p class="order-customer">${order.name}</p>
-        <p class="order-sub">${order.type === "mesa" ? "Mesa " + order.table : "Para llevar"}${order.notes ? " · " + order.notes : ""}</p>
+        <p class="order-sub">${order.type === "mesa" ? "Mesa " + order.table : "Para llevar"}${isAddition ? " · producto agregado tras la entrega" : (order.notes ? " · " + order.notes : "")}</p>
         <div class="order-items">${itemsHtml}</div>
         <div class="order-foot">
-          <span class="order-time">${timeAgo(order.time)} · ${fmt(order.total)}</span>
+          <span class="order-time">${timeAgo(order.time)} · ${fmt(batch.total)}</span>
           ${actionHtml}
         </div>
       `;
@@ -1364,6 +1607,21 @@ function doPost(e) {
     wrap.querySelectorAll(".btn-status").forEach(btn => {
       btn.addEventListener("click", () => advanceStatus(btn.dataset.num));
     });
+    wrap.querySelectorAll(".btn-delete-order").forEach(btn => {
+      btn.addEventListener("click", () => deleteOrder(btn.dataset.num));
+    });
+  }
+
+  function deleteOrder(num){
+    const order = orders.find(o => o.num === num);
+    if(!order) return;
+    if(confirm(`¿Eliminar el pedido ${num} de ${order.name}? Esta acción no se puede deshacer.`)){
+      orders = orders.filter(o => o.num !== num);
+      saveLocalOrders();
+      renderOrders();
+      updateOrdersBadge();
+      renderDelivered();
+    }
   }
 
   function renderDelivered(){
@@ -1387,7 +1645,7 @@ function doPost(e) {
     }
 
     if(delivered.length === 0){
-      tbody.innerHTML = `<tr><td colspan="8" class="delivered-empty">Todavía no hay pedidos entregados.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="delivered-empty">Todavía no hay pedidos entregados.</td></tr>`;
       return;
     }
 
@@ -1413,12 +1671,16 @@ function doPost(e) {
           <td class="delivered-total">${fmt(order.total)}</td>
           <td><button class="paid-toggle ${paid ? "pagado" : "pendiente"}" data-num="${order.num}">${paid ? "✅ Pagado" : "Marcar pagado"}</button></td>
           <td>${order.notes || "—"}</td>
+          <td><button class="btn-add-more" data-num="${order.num}">+ Agregar</button></td>
         </tr>
       `;
     }).join("");
 
     tbody.querySelectorAll(".paid-toggle").forEach(btn => {
       btn.addEventListener("click", () => togglePaid(btn.dataset.num));
+    });
+    tbody.querySelectorAll(".btn-add-more").forEach(btn => {
+      btn.addEventListener("click", () => openAddItemsModal(btn.dataset.num));
     });
   }
 
@@ -1430,10 +1692,223 @@ function doPost(e) {
     renderDelivered();
   }
 
+  // ---------------- GESTIONAR MENÚ ----------------
+  const addProductOverlay = $("#addProductOverlay");
+
+  function renderMenuManage(){
+    const wrap = $("#menuManageList");
+    if(menuData.length === 0){
+      wrap.innerHTML = `<p class="manage-empty">Todavía no hay productos en el menú.</p>`;
+      return;
+    }
+    wrap.innerHTML = "";
+    categories.forEach(cat => {
+      const catItems = menuData.filter(m => m.cat === cat);
+      if(catItems.length === 0) return;
+
+      const title = document.createElement("p");
+      title.className = "manage-cat-title";
+      title.textContent = cat;
+      wrap.appendChild(title);
+
+      catItems.forEach(item => {
+        const available = isAvailable(item);
+        const row = document.createElement("div");
+        row.className = "manage-row" + (available ? "" : " sold-out");
+        row.innerHTML = `
+          <span class="manage-row-icon">${item.icon || "🍽️"}</span>
+          <div class="manage-row-info">
+            <div class="manage-row-name">${item.name}</div>
+            <div class="manage-row-desc">${item.desc || ""}</div>
+          </div>
+          <span class="manage-row-price">${fmt(item.price)}</span>
+          <button class="paid-toggle ${available ? "disponible" : "agotado"}" data-id="${item.id}">
+            ${available ? "✅ Disponible" : "🚫 Agotado"}
+          </button>
+        `;
+        wrap.appendChild(row);
+      });
+    });
+
+    wrap.querySelectorAll(".paid-toggle").forEach(btn => {
+      btn.addEventListener("click", () => toggleAvailability(Number(btn.dataset.id)));
+    });
+  }
+
+  function toggleAvailability(id){
+    const item = itemById(id);
+    if(!item) return;
+    item.available = !isAvailable(item);
+    saveLocalMenu();
+    renderMenuManage();
+    renderMenu(); // refleja el cambio de inmediato en "Ordenar"
+  }
+
+  $("#btnOpenAddProduct").addEventListener("click", () => {
+    $("#prodCat").innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join("");
+    $("#prodName").value = "";
+    $("#prodPrice").value = "";
+    $("#prodDesc").value = "";
+    $("#prodIcon").value = "";
+    $("#errProdName").style.display = "none";
+    $("#errProdPrice").style.display = "none";
+    addProductOverlay.classList.add("open");
+  });
+
+  $("#btnCancelAddProduct").addEventListener("click", () => {
+    addProductOverlay.classList.remove("open");
+  });
+
+  $("#btnConfirmAddProduct").addEventListener("click", () => {
+    const name = $("#prodName").value.trim();
+    const cat = $("#prodCat").value;
+    const priceRaw = $("#prodPrice").value.trim().replace(",", ".");
+    const price = Number(priceRaw);
+    const desc = $("#prodDesc").value.trim();
+    const icon = $("#prodIcon").value.trim();
+
+    let valid = true;
+    $("#errProdName").style.display = name ? "none" : "block";
+    if(!name) valid = false;
+
+    const priceOk = priceRaw !== "" && !isNaN(price) && price > 0;
+    $("#errProdPrice").style.display = priceOk ? "none" : "block";
+    if(!priceOk) valid = false;
+
+    if(!valid) return;
+
+    const newId = menuData.reduce((max, m) => Math.max(max, m.id), 0) + 1;
+    menuData.push({
+      id: newId,
+      cat,
+      icon: icon || "🍽️",
+      name,
+      desc,
+      price,
+      available: true
+    });
+
+    saveLocalMenu();
+    renderMenuManage();
+    renderMenu(); // el producto nuevo aparece de inmediato en "Ordenar"
+    addProductOverlay.classList.remove("open");
+  });
+
+  // ---------------- AGREGAR PRODUCTOS A UN PEDIDO ENTREGADO ----------------
+  const addItemsOverlay = $("#addItemsOverlay");
+  let addItemsTarget = null; // referencia al pedido
+  let addItemsCart = {}; // id -> qty, solo mientras el modal está abierto
+
+  function openAddItemsModal(num){
+    const order = orders.find(o => o.num === num);
+    if(!order) return;
+    addItemsTarget = order;
+    addItemsCart = {};
+    $("#addItemsSub").textContent = `${order.num} · ${order.name}`;
+    renderAddItemsList();
+    updateAddItemsSubtotal();
+    addItemsOverlay.classList.add("open");
+  }
+
+  function renderAddItemsList(){
+    const wrap = $("#addItemsList");
+    wrap.innerHTML = "";
+    categories.forEach(cat => {
+      const catTitle = document.createElement("p");
+      catTitle.className = "add-items-cat";
+      catTitle.textContent = cat;
+      wrap.appendChild(catTitle);
+
+      menuData.filter(m => m.cat === cat).forEach(item => {
+        const qty = addItemsCart[item.id] || 0;
+        const row = document.createElement("div");
+        row.className = "add-items-row";
+        row.innerHTML = `
+          <span class="name">${item.icon || "🍽️"} ${item.name}</span>
+          <span class="mini-qty">
+            <button type="button" aria-label="Quitar uno">−</button>
+            <span class="qty-num">${qty}</span>
+            <button type="button" aria-label="Agregar uno">+</button>
+          </span>
+          <span class="price">${fmt(item.price)}</span>
+        `;
+        const btns = row.querySelectorAll("button");
+        btns[0].addEventListener("click", () => changeAddItemsQty(item.id, -1));
+        btns[1].addEventListener("click", () => changeAddItemsQty(item.id, 1));
+        wrap.appendChild(row);
+      });
+    });
+  }
+
+  function changeAddItemsQty(id, delta){
+    const next = Math.max(0, (addItemsCart[id] || 0) + delta);
+    if(next === 0) delete addItemsCart[id]; else addItemsCart[id] = next;
+    renderAddItemsList();
+    updateAddItemsSubtotal();
+  }
+
+  function updateAddItemsSubtotal(){
+    const subtotal = Object.entries(addItemsCart)
+      .reduce((sum,[id,qty]) => sum + itemById(Number(id)).price * qty, 0);
+    $("#addItemsSubtotal").textContent = fmt(subtotal);
+    $("#btnConfirmAddItems").disabled = Object.keys(addItemsCart).length === 0;
+  }
+
+  $("#btnCancelAddItems").addEventListener("click", () => {
+    addItemsOverlay.classList.remove("open");
+  });
+
+  $("#btnConfirmAddItems").addEventListener("click", () => {
+    if(!addItemsTarget) return;
+    const addedItems = Object.entries(addItemsCart).map(([id, qty]) => ({...itemById(Number(id)), qty}));
+    if(addedItems.length === 0) return;
+    const addedTotal = addedItems.reduce((sum, it) => sum + it.price * it.qty, 0);
+
+    addedItems.forEach(added => {
+      const existing = addItemsTarget.items.find(it => it.id === added.id);
+      if(existing){ existing.qty += added.qty; }
+      else { addItemsTarget.items.push({...added}); }
+    });
+    addItemsTarget.total += addedTotal;
+    addItemsTarget.paid = false; // el total cambió, vuelve a quedar pendiente de pago
+
+    // Esta nueva tanda pasa por cocina (En preparación → Listo) antes de dársela al cliente.
+    // Todavía NO se envía a Google Sheets: eso ocurre recién cuando se marque "Entregado".
+    addItemsTarget.currentBatch = { items: addedItems, total: addedTotal };
+    addItemsTarget.status = "preparando";
+
+    saveLocalOrders();
+    renderDelivered();
+    renderOrders();
+    updateOrdersBadge();
+
+    addItemsOverlay.classList.remove("open");
+    setView("pedidos"); // el pedido vuelve a la cocina, mostrémoslo de una vez
+  });
+
   function advanceStatus(num){
     const order = orders.find(o => o.num === num);
     if(!order || !nextStatus[order.status]) return;
     order.status = nextStatus[order.status];
+
+    if(order.status === "entregado"){
+      const isFirstDelivery = !order.everDelivered;
+      order.everDelivered = true;
+      const batch = order.currentBatch;
+      if(batch && batch.items && batch.items.length){
+        sendOrderToSheet({
+          num: isFirstDelivery ? order.num : (order.num + " (+)"),
+          name: order.name,
+          type: order.type,
+          table: order.table,
+          items: batch.items,
+          total: batch.total,
+          notes: isFirstDelivery ? order.notes : "Productos agregados después de la entrega"
+        });
+      }
+      order.currentBatch = null;
+    }
+
     saveLocalOrders();
     renderOrders();
     updateOrdersBadge();
@@ -1486,7 +1961,7 @@ function doPost(e) {
       const tapeRot = idx % 2 === 0 ? "-6deg" : "4deg";
 
       const card = document.createElement("article");
-      card.className = "card";
+      card.className = "card" + (isAvailable(item) ? "" : " sold-out");
       card.style.setProperty("--rot", rot + "deg");
       card.style.setProperty("--tape-x", tapeX);
       card.style.setProperty("--tape-rot", tapeRot);
@@ -1495,6 +1970,7 @@ function doPost(e) {
 
       card.innerHTML = `
         <span class="tape"></span>
+        ${isAvailable(item) ? "" : '<span class="sold-out-ribbon">Agotado</span>'}
         <div class="card-head">
           <h3 class="card-name-wrap"><span class="food-icon" aria-hidden="true">${item.icon || "🍽️"}</span><span class="card-name">${item.name}</span></h3>
           <span class="price-stamp">${fmt(item.price)}</span>
@@ -1509,7 +1985,17 @@ function doPost(e) {
 
   function renderCardFooter(footer, id, qty){
     footer.innerHTML = "";
+    const item = itemById(id);
+    const available = isAvailable(item);
+
     if(qty === 0){
+      if(!available){
+        const label = document.createElement("span");
+        label.className = "btn-sold-out";
+        label.textContent = "Agotado";
+        footer.appendChild(label);
+        return;
+      }
       const btn = document.createElement("button");
       btn.className = "btn-add";
       btn.innerHTML = "+ Agregar";
@@ -1521,10 +2007,12 @@ function doPost(e) {
       wrap.innerHTML = `
         <button aria-label="Quitar uno">−</button>
         <span class="qty-num">${qty}</span>
-        <button aria-label="Agregar uno">+</button>
+        <button aria-label="Agregar uno" ${available ? "" : "disabled style=\"opacity:.4;\""}>+</button>
       `;
       wrap.children[0].addEventListener("click", () => removeItem(id));
-      wrap.children[2].addEventListener("click", () => addItem(id));
+      if(available){
+        wrap.children[2].addEventListener("click", () => addItem(id));
+      }
       footer.appendChild(wrap);
     }
   }
@@ -1679,20 +2167,19 @@ function doPost(e) {
       total,
       time: new Date(),
       status: "preparando",
-      paid: false
+      paid: false,
+      everDelivered: false,
+      currentBatch: { items, total, notes }
     });
     saveLocalOrders();
     updateOrdersBadge();
     if(activeView === "pedidos") renderOrders();
-    const orderToSend = orders[orders.length - 1];
-    const sheetSent = await sendOrderToSheet(orderToSend);
+    renderDelivered();
 
     checkoutOverlay.classList.remove("open");
-    $("#confirmOverlay .confirm-sub").textContent = sheetSent
-      ? "Pedido registrado. Te avisamos en cuanto esté listo."
-      : (sheetsWebhookUrl
-          ? "Pedido creado, pero no pudimos confirmar el envío a Google Sheets."
-          : "Pedido creado localmente. Conectá Google Sheets desde ⚙️ para enviarlo a cocina.");
+    $("#confirmOverlay .confirm-sub").textContent = sheetsWebhookUrl
+      ? "Pedido en camino a cocina. Se registrará en Google Sheets cuando esté listo y entregado."
+      : "Pedido en camino a cocina. Conectá Google Sheets desde ⚙️ si querés llevar el registro ahí.";
 
     confirmOverlay.classList.add("open");
 
@@ -1710,6 +2197,7 @@ function doPost(e) {
   });
 
   // ---------------- INIT ----------------
+  loadLocalMenu();
   loadLocalOrders();
   renderTabs();
   renderMenu();
