@@ -438,6 +438,34 @@
     border:1.5px solid var(--achiote);
   }
   .paid-toggle.agotado:hover{background:rgba(193,68,45,.22);}
+  .paid-toggle.deshabilitado{
+    background:rgba(43,38,33,.1);
+    color:#5b5346;
+    border:1.5px solid rgba(43,38,33,.3);
+  }
+  .paid-toggle.deshabilitado:hover{background:rgba(43,38,33,.2);}
+  .btn-edit-product{
+    background:var(--mostaza);
+    color:var(--tinta);
+    border:none;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .btn-edit-product:hover{opacity:.85;}
+  .hidden-tag{
+    font-family:'Space Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    color:#5b5346;
+    background:rgba(43,38,33,.12);
+    padding:2px 7px;
+    border-radius:999px;
+    vertical-align:middle;
+    margin-left:6px;
+  }
 
   /* ---------- GESTIONAR MENÚ ---------- */
   .menu-manage-view{
@@ -465,6 +493,7 @@
     box-shadow:0 3px 8px rgba(0,0,0,.18);
   }
   .manage-row.sold-out{opacity:.6;}
+  .manage-row.disabled-item{opacity:.5;}
   .manage-row-icon{font-size:20px; flex:none;}
   .manage-row-info{flex:1; min-width:0;}
   .manage-row-name{font-weight:700; font-size:14px;}
@@ -473,6 +502,13 @@
     font-family:'Space Mono', monospace;
     font-weight:700;
     flex:none;
+  }
+  .manage-row-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    flex:none;
+    justify-content:flex-end;
   }
   .manage-empty{
     text-align:center;
@@ -1206,8 +1242,8 @@ function doPost(e) {
   <!-- ADD PRODUCT MODAL -->
   <div class="modal-overlay" id="addProductOverlay">
     <div class="modal">
-      <h2>Nuevo producto</h2>
-      <p class="sub">Se agrega al menú y ya lo pueden pedir de inmediato.</p>
+      <h2 id="addProductTitle">Nuevo producto</h2>
+      <p class="sub" id="addProductSub">Se agrega al menú y ya lo pueden pedir de inmediato.</p>
 
       <div class="form-group">
         <label for="prodName">Nombre</label>
@@ -1330,6 +1366,7 @@ function doPost(e) {
 
   function itemById(id){ return menuData.find(m => m.id === id); }
   function isAvailable(item){ return item.available !== false; }
+  function isEnabled(item){ return item.enabled !== false; }
 
   function loadLocalMenu(){
     try {
@@ -1694,6 +1731,7 @@ function doPost(e) {
 
   // ---------------- GESTIONAR MENÚ ----------------
   const addProductOverlay = $("#addProductOverlay");
+  let editingProductId = null; // null = modo "agregar", número = modo "editar"
 
   function renderMenuManage(){
     const wrap = $("#menuManageList");
@@ -1713,25 +1751,38 @@ function doPost(e) {
 
       catItems.forEach(item => {
         const available = isAvailable(item);
+        const enabled = isEnabled(item);
         const row = document.createElement("div");
-        row.className = "manage-row" + (available ? "" : " sold-out");
+        row.className = "manage-row" + (available ? "" : " sold-out") + (enabled ? "" : " disabled-item");
         row.innerHTML = `
           <span class="manage-row-icon">${item.icon || "🍽️"}</span>
           <div class="manage-row-info">
-            <div class="manage-row-name">${item.name}</div>
+            <div class="manage-row-name">${item.name}${enabled ? "" : '<span class="hidden-tag">🙈 Oculto en Ordenar</span>'}</div>
             <div class="manage-row-desc">${item.desc || ""}</div>
           </div>
           <span class="manage-row-price">${fmt(item.price)}</span>
-          <button class="paid-toggle ${available ? "disponible" : "agotado"}" data-id="${item.id}">
-            ${available ? "✅ Disponible" : "🚫 Agotado"}
-          </button>
+          <div class="manage-row-actions">
+            <button class="paid-toggle ${available ? "disponible" : "agotado"} btn-toggle-available" data-id="${item.id}">
+              ${available ? "✅ Disponible" : "🚫 Agotado"}
+            </button>
+            <button class="paid-toggle ${enabled ? "disponible" : "deshabilitado"} btn-toggle-enabled" data-id="${item.id}">
+              ${enabled ? "👁️ Habilitado" : "🙈 Deshabilitado"}
+            </button>
+            <button class="btn-edit-product" data-id="${item.id}">✏️ Modificar</button>
+          </div>
         `;
         wrap.appendChild(row);
       });
     });
 
-    wrap.querySelectorAll(".paid-toggle").forEach(btn => {
+    wrap.querySelectorAll(".btn-toggle-available").forEach(btn => {
       btn.addEventListener("click", () => toggleAvailability(Number(btn.dataset.id)));
+    });
+    wrap.querySelectorAll(".btn-toggle-enabled").forEach(btn => {
+      btn.addEventListener("click", () => toggleEnabled(Number(btn.dataset.id)));
+    });
+    wrap.querySelectorAll(".btn-edit-product").forEach(btn => {
+      btn.addEventListener("click", () => openEditProductModal(Number(btn.dataset.id)));
     });
   }
 
@@ -1744,16 +1795,46 @@ function doPost(e) {
     renderMenu(); // refleja el cambio de inmediato en "Ordenar"
   }
 
-  $("#btnOpenAddProduct").addEventListener("click", () => {
-    $("#prodCat").innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join("");
-    $("#prodName").value = "";
-    $("#prodPrice").value = "";
-    $("#prodDesc").value = "";
-    $("#prodIcon").value = "";
+  function toggleEnabled(id){
+    const item = itemById(id);
+    if(!item) return;
+    item.enabled = !isEnabled(item);
+    saveLocalMenu();
+    renderMenuManage();
+    renderMenu(); // si se deshabilita, desaparece de "Ordenar"; si se habilita, vuelve a aparecer
+  }
+
+  function fillProductForm(item){
+    $("#prodCat").innerHTML = categories.map(c =>
+      `<option value="${c}" ${item && c === item.cat ? "selected" : ""}>${c}</option>`
+    ).join("");
+    $("#prodName").value = item ? item.name : "";
+    $("#prodPrice").value = item ? item.price : "";
+    $("#prodDesc").value = item ? item.desc || "" : "";
+    $("#prodIcon").value = item ? item.icon || "" : "";
     $("#errProdName").style.display = "none";
     $("#errProdPrice").style.display = "none";
+  }
+
+  $("#btnOpenAddProduct").addEventListener("click", () => {
+    editingProductId = null;
+    $("#addProductTitle").textContent = "Nuevo producto";
+    $("#addProductSub").textContent = "Se agrega al menú y ya lo pueden pedir de inmediato.";
+    $("#btnConfirmAddProduct").textContent = "Agregar al menú";
+    fillProductForm(null);
     addProductOverlay.classList.add("open");
   });
+
+  function openEditProductModal(id){
+    const item = itemById(id);
+    if(!item) return;
+    editingProductId = id;
+    $("#addProductTitle").textContent = "Editar producto";
+    $("#addProductSub").textContent = `Estás modificando "${item.name}".`;
+    $("#btnConfirmAddProduct").textContent = "Guardar cambios";
+    fillProductForm(item);
+    addProductOverlay.classList.add("open");
+  }
 
   $("#btnCancelAddProduct").addEventListener("click", () => {
     addProductOverlay.classList.remove("open");
@@ -1777,21 +1858,34 @@ function doPost(e) {
 
     if(!valid) return;
 
-    const newId = menuData.reduce((max, m) => Math.max(max, m.id), 0) + 1;
-    menuData.push({
-      id: newId,
-      cat,
-      icon: icon || "🍽️",
-      name,
-      desc,
-      price,
-      available: true
-    });
+    if(editingProductId !== null){
+      const item = itemById(editingProductId);
+      if(item){
+        item.name = name;
+        item.cat = cat;
+        item.price = price;
+        item.desc = desc;
+        item.icon = icon || "🍽️";
+      }
+    } else {
+      const newId = menuData.reduce((max, m) => Math.max(max, m.id), 0) + 1;
+      menuData.push({
+        id: newId,
+        cat,
+        icon: icon || "🍽️",
+        name,
+        desc,
+        price,
+        available: true,
+        enabled: true
+      });
+    }
 
     saveLocalMenu();
     renderMenuManage();
-    renderMenu(); // el producto nuevo aparece de inmediato en "Ordenar"
+    renderMenu(); // los cambios se reflejan de inmediato en "Ordenar"
     addProductOverlay.classList.remove("open");
+    editingProductId = null;
   });
 
   // ---------------- AGREGAR PRODUCTOS A UN PEDIDO ENTREGADO ----------------
@@ -1954,7 +2048,13 @@ function doPost(e) {
   function renderMenu(){
     const grid = $("#menuGrid");
     grid.innerHTML = "";
-    const items = menuData.filter(m => m.cat === activeCategory);
+    const items = menuData.filter(m => m.cat === activeCategory && isEnabled(m));
+
+    if(items.length === 0){
+      grid.innerHTML = `<p class="manage-empty" style="grid-column:1/-1;">Todavía no hay productos disponibles en esta categoría.</p>`;
+      return;
+    }
+
     items.forEach((item, idx) => {
       const rot = rotations[idx % rotations.length];
       const tapeX = idx % 2 === 0 ? "22px" : "58%";
