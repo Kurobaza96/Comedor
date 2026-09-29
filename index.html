@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Comedor Jornalero — Pedidos</title>
+<title>Comedor Doña Chelo — Pedidos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -132,6 +132,7 @@
     gap:8px;
     transition:all .15s ease;
   }
+  .main-tab[hidden]{display:none;}
   .main-tab:hover{color:var(--tiza); border-color:var(--mostaza);}
   .main-tab.active{
     background:var(--mostaza);
@@ -1033,20 +1034,21 @@
 
   <header>
     <p class="eyebrow">Pedidos para hoy</p>
-    <h1>Comedor Jornalero</h1>
+    <h1>Comedor Doña Chelo</h1>
     <p class="tagline">Comida casera, como en casa</p>
     <div class="meta-row">
       <span id="fechaHoy">—</span>
-      <span>Lun–Sáb · 7:00 a 18:00</span>
-      <span>Zona 11, Guatemala</span>
+      <span>Lun–Sáb · 7:00 a 16:00</span>
+      <span>Zona 1, Guatemala</span>
     </div>
   </header>
 
   <nav class="main-nav" id="mainNav">
     <button class="main-tab active" data-view="ordenar">🍽️ Ordenar</button>
-    <button class="main-tab" data-view="pedidos">🧾 Pedidos enviados <span class="badge" id="ordersBadge" hidden>0</span></button>
-    <button class="main-tab" data-view="entregados">✅ Entregados <span class="badge" id="deliveredBadge" hidden>0</span></button>
-    <button class="main-tab" data-view="menu">🍲 Menú</button>
+    <button class="main-tab staff-tab" hidden data-view="pedidos">🧾 Pedidos enviados <span class="badge" id="ordersBadge" hidden>0</span></button>
+    <button class="main-tab staff-tab" hidden data-view="entregados">✅ Entregados <span class="badge" id="deliveredBadge" hidden>0</span></button>
+    <button class="main-tab staff-tab" hidden data-view="menu">🍲 Menú</button>
+    <button class="main-tab" id="btnAuth" type="button">🔐 Ingresar</button>
   </nav>
 
   <div id="ordenarView">
@@ -1125,7 +1127,7 @@
   </button>
   <div class="sheet-overlay" id="sheetOverlay"></div>
 
-  <footer>Hecho con cariño en la cocina del Jornalero</footer>
+  <footer>Hecho con cariño en la cocina de Doña Chelo</footer>
 
   <!-- CHECKOUT MODAL -->
   <div class="modal-overlay" id="checkoutOverlay">
@@ -1240,6 +1242,26 @@ function doPost(e) {
   </div>
 
   <!-- ADD PRODUCT MODAL -->
+  <div class="modal-overlay" id="loginOverlay">
+    <div class="modal">
+      <h2>Ingresar</h2>
+      <p class="sub">Solo para el personal del comedor.</p>
+      <div class="form-group">
+        <label for="loginEmail">Correo</label>
+        <input type="email" id="loginEmail" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Contraseña</label>
+        <input type="password" id="loginPassword" autocomplete="current-password">
+        <p class="error-text" id="errLogin">Correo o contraseña incorrectos.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btnCancelLogin">Cancelar</button>
+        <button class="btn-primary" id="btnConfirmLogin">Entrar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="addProductOverlay">
     <div class="modal">
       <h2 id="addProductTitle">Nuevo producto</h2>
@@ -1315,7 +1337,7 @@ function doPost(e) {
   // ---------------- SUPABASE ----------------
   // 👉 Reemplazá estas dos líneas con los datos de TU proyecto de Supabase
   // (Project Settings → API → Project URL / anon public key)
-  const SUPABASE_URL = "https://bsfrdngfxykxhgguymec.supabase.co";       // ej: https://xxxxxxxx.supabase.co
+  const SUPABASE_URL = "https://bsfrdngfxykxhgguymec.supabase.co/rest/v1/";       // ej: https://xxxxxxxx.supabase.co
   const SUPABASE_ANON_KEY = "sb_publishable_efMZin9wIc8pVrmW_53TqA_9-qnGQhb";
 
   function isSupabaseConfigured(){
@@ -1440,6 +1462,7 @@ function doPost(e) {
 
   let activeCategory = categories[0];
   let cart = {}; // id -> qty
+  let currentUser = null; // usuario de Supabase Auth (personal)
   let orders = []; // pedidos, cargados desde Supabase
   let activeView = "ordenar"; // "ordenar" | "pedidos"
   let sheetsWebhookUrl = null;
@@ -1608,6 +1631,7 @@ function doPost(e) {
   const fabCartBtn = $("#fabCart");
 
   function setView(view){
+    if(!currentUser && view !== "ordenar") view = "ordenar"; // vistas de personal requieren sesión
     activeView = view;
     document.querySelectorAll(".main-tab").forEach(btn => {
       btn.classList.toggle("active", btn.dataset.view === view);
@@ -1633,7 +1657,7 @@ function doPost(e) {
       renderMenuManage();
     }
   }
-  document.querySelectorAll(".main-tab").forEach(btn => {
+  document.querySelectorAll(".main-tab[data-view]").forEach(btn => {
     btn.addEventListener("click", () => setView(btn.dataset.view));
   });
 
@@ -2427,6 +2451,53 @@ function doPost(e) {
   $("#btnNewOrder").addEventListener("click", () => {
     confirmOverlay.classList.remove("open");
   });
+
+  // ---------------- USUARIOS (Supabase Auth) ----------------
+  const loginOverlay = $("#loginOverlay");
+
+  function applyAuthUI(){
+    document.querySelectorAll(".staff-tab").forEach(b => b.hidden = !currentUser);
+    $("#btnAuth").textContent = currentUser ? "🚪 Salir" : "🔐 Ingresar";
+    if(!currentUser && activeView !== "ordenar") setView("ordenar");
+  }
+
+  $("#btnAuth").addEventListener("click", async () => {
+    if(currentUser){ await supabaseClient.auth.signOut(); return; }
+    if(!requireSupabase()) return;
+    $("#errLogin").style.display = "none";
+    loginOverlay.classList.add("open");
+    $("#loginEmail").focus();
+  });
+  $("#btnCancelLogin").addEventListener("click", () => loginOverlay.classList.remove("open"));
+  $("#btnConfirmLogin").addEventListener("click", async () => {
+    const btn = $("#btnConfirmLogin");
+    btn.disabled = true;
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: $("#loginEmail").value.trim(),
+      password: $("#loginPassword").value
+    });
+    btn.disabled = false;
+    if(error){ console.error(error); $("#errLogin").style.display = "block"; return; }
+    $("#loginPassword").value = "";
+    loginOverlay.classList.remove("open");
+  });
+  $("#loginPassword").addEventListener("keydown", e => { if(e.key === "Enter") $("#btnConfirmLogin").click(); });
+
+  if(supabaseClient){
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      const wasLoggedIn = !!currentUser;
+      currentUser = session ? session.user : null;
+      applyAuthUI();
+      // setTimeout evita bloqueos al llamar a Supabase dentro de este callback
+      if(currentUser && !wasLoggedIn){
+        setTimeout(async () => {
+          await loadOrdersFromSupabase();
+          updateOrdersBadge();
+          renderDelivered();
+        }, 0);
+      }
+    });
+  }
 
   // ---------------- INIT ----------------
   async function initApp(){
