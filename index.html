@@ -1345,7 +1345,7 @@ function doPost(e) {
   }
 
   const supabaseClient = isSupabaseConfigured()
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(SUPABASE_URL.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, ""), SUPABASE_ANON_KEY)
     : null;
 
   function requireSupabase(){
@@ -2477,7 +2477,15 @@ function doPost(e) {
       password: $("#loginPassword").value
     });
     btn.disabled = false;
-    if(error){ console.error(error); $("#errLogin").style.display = "block"; return; }
+    if(error){
+      console.error(error);
+      const msg = /invalid login/i.test(error.message) ? "Correo o contraseña incorrectos."
+        : /not confirmed/i.test(error.message) ? "El correo no está confirmado. En Supabase, abrí el usuario y confirmalo."
+        : "No se pudo ingresar: " + error.message;
+      $("#errLogin").textContent = msg;
+      $("#errLogin").style.display = "block";
+      return;
+    }
     $("#loginPassword").value = "";
     loginOverlay.classList.remove("open");
   });
