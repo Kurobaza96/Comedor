@@ -1310,7 +1310,115 @@ function doPost(e) {
     </div>
   </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  // ---------------- SUPABASE ----------------
+  // 👉 Reemplazá estas dos líneas con los datos de TU proyecto de Supabase
+  // (Project Settings → API → Project URL / anon public key)
+  const SUPABASE_URL = "https://bsfrdngfxykxhgguymec.supabase.co/rest/v1/";       // ej: https://xxxxxxxx.supabase.co
+  const SUPABASE_ANON_KEY = "sb_publishable_efMZin9wIc8pVrmW_53TqA_9-qnGQhb";
+
+  function isSupabaseConfigured(){
+    return SUPABASE_URL.startsWith("http") && !SUPABASE_ANON_KEY.includes("TU_SUPABASE_ANON_KEY_AQUI");
+  }
+
+  const supabaseClient = isSupabaseConfigured()
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  function requireSupabase(){
+    if(!supabaseClient){
+      alert("Primero configurá tu conexión a Supabase: editá SUPABASE_URL y SUPABASE_ANON_KEY al inicio del archivo.");
+      return false;
+    }
+    return true;
+  }
+
+  function showConfigBanner(){
+    const banner = document.createElement("div");
+    banner.style.cssText = "background:#C1442D;color:#F2EEDD;text-align:center;padding:10px 16px;font-family:'Space Mono',monospace;font-size:12px;position:sticky;top:0;z-index:80;";
+    banner.textContent = "⚠️ Falta configurar Supabase: editá SUPABASE_URL y SUPABASE_ANON_KEY al inicio del <script> de este archivo.";
+    document.body.prepend(banner);
+  }
+
+  // ---------------- MAPEO fila de Supabase ↔ objeto de la app ----------------
+  function dbRowToOrder(row){
+    return {
+      id: row.id,
+      num: "#" + String(row.id).padStart(3, "0"),
+      name: row.customer_name,
+      type: row.order_type,
+      table: row.table_number || "",
+      notes: row.notes || "",
+      items: row.items || [],
+      total: Number(row.total) || 0,
+      time: new Date(row.created_at),
+      status: row.status,
+      paid: !!row.paid,
+      everDelivered: !!row.ever_delivered,
+      currentBatch: row.current_batch || null
+    };
+  }
+
+  function dbRowToMenuItem(row){
+    return {
+      id: row.id,
+      cat: row.cat,
+      icon: row.icon || "🍽️",
+      name: row.name,
+      desc: row.description || "",
+      price: Number(row.price),
+      available: row.available !== false,
+      enabled: row.enabled !== false
+    };
+  }
+
+  async function loadMenuFromSupabase(){
+    const { data, error } = await supabaseClient.from("menu_items").select("*").order("id");
+    if(error){ console.error("Error cargando menú:", error); return; }
+    if(data && data.length) menuData = data.map(dbRowToMenuItem);
+  }
+
+  async function loadOrdersFromSupabase(){
+    const { data, error } = await supabaseClient.from("orders").select("*").order("id");
+    if(error){ console.error("Error cargando pedidos:", error); return; }
+    if(data) orders = data.map(dbRowToOrder);
+  }
+
+  function subscribeRealtime(){
+    supabaseClient
+      .channel("orders-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, payload => {
+        if(payload.eventType === "DELETE"){
+          orders = orders.filter(o => o.id !== payload.old.id);
+        } else {
+          const mapped = dbRowToOrder(payload.new);
+          const idx = orders.findIndex(o => o.id === mapped.id);
+          if(idx >= 0) orders[idx] = mapped; else orders.push(mapped);
+        }
+        orders.sort((a,b) => a.id - b.id);
+        renderOrders();
+        renderDelivered();
+        updateOrdersBadge();
+      })
+      .subscribe();
+
+    supabaseClient
+      .channel("menu-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "menu_items" }, payload => {
+        if(payload.eventType === "DELETE"){
+          menuData = menuData.filter(m => m.id !== payload.old.id);
+        } else {
+          const mapped = dbRowToMenuItem(payload.new);
+          const idx = menuData.findIndex(m => m.id === mapped.id);
+          if(idx >= 0) menuData[idx] = mapped; else menuData.push(mapped);
+        }
+        renderMenu();
+        if(activeView === "menu") renderMenuManage();
+      })
+      .subscribe();
+  }
+
   // ---------------- DATA ----------------
   let menuData = [
     {id:1, cat:"Plato del día", icon:"🍗", name:"Pepián de pollo", desc:"Pollo en salsa de semillas tostadas y chile, con arroz.", price:38},
@@ -1326,37 +1434,13 @@ function doPost(e) {
     {id:11, cat:"Postres", icon:"🍩", name:"Buñuelos", desc:"Bolitas fritas bañadas en miel de panela.", price:10},
     {id:12, cat:"Postres", icon:"🍮", name:"Flan de coco", desc:"Flan casero con coco rallado.", price:12},
     {id:13, cat:"Postres", icon:"🍦", name:"Helado", desc:"Cono con helado de vainilla.", price:10},
-  ];
+  ]; // menú por defecto — se reemplaza por el de Supabase en cuanto carga
   const categories = ["Plato del día","Antojitos","Bebidas","Postres"];
   const rotations = [-1.6, 1.2, -0.8, 1.7, -1.3, 0.9];
 
   let activeCategory = categories[0];
   let cart = {}; // id -> qty
-  let orderCounter = Number(localStorage.getItem("comedor_order_counter") || 40);
-  let orders = []; // pedidos enviados a cocina
-
-  function loadLocalOrders(){
-    try {
-      const saved = JSON.parse(localStorage.getItem("comedor_orders") || "[]");
-      orders = Array.isArray(saved) ? saved.map(o => ({
-        ...o,
-        time: new Date(o.time)
-      })) : [];
-    } catch(err){
-      orders = [];
-    }
-    updateOrdersBadge();
-    renderDelivered();
-  }
-
-  function saveLocalOrders(){
-    try {
-      localStorage.setItem("comedor_orders", JSON.stringify(orders));
-      localStorage.setItem("comedor_order_counter", String(orderCounter));
-    } catch(err){
-      console.warn("No se pudieron guardar los pedidos localmente.", err);
-    }
-  }
+  let orders = []; // pedidos, cargados desde Supabase
   let activeView = "ordenar"; // "ordenar" | "pedidos"
   let sheetsWebhookUrl = null;
 
@@ -1367,25 +1451,6 @@ function doPost(e) {
   function itemById(id){ return menuData.find(m => m.id === id); }
   function isAvailable(item){ return item.available !== false; }
   function isEnabled(item){ return item.enabled !== false; }
-
-  function loadLocalMenu(){
-    try {
-      const saved = JSON.parse(localStorage.getItem("comedor_menu") || "null");
-      if(Array.isArray(saved) && saved.length){
-        menuData = saved;
-      }
-    } catch(err){
-      // si algo falla, se sigue usando el menú por defecto ya cargado en memoria
-    }
-  }
-
-  function saveLocalMenu(){
-    try {
-      localStorage.setItem("comedor_menu", JSON.stringify(menuData));
-    } catch(err){
-      console.warn("No se pudo guardar el menú localmente.", err);
-    }
-  }
 
   function cartTotal(){
     return Object.entries(cart).reduce((sum,[id,qty]) => sum + itemById(Number(id)).price * qty, 0);
@@ -1617,7 +1682,7 @@ function doPost(e) {
         `<div><span>${it.icon || "🍽️"} ${it.qty} × ${it.name}</span><span>${fmt(it.price * it.qty)}</span></div>`
       ).join("");
 
-      const actionHtml = `<button class="btn-status" data-num="${order.num}">${nextActionLabel[order.status]}</button>`;
+      const actionHtml = `<button class="btn-status" data-id="${order.id}">${nextActionLabel[order.status]}</button>`;
       const additionTag = isAddition ? `<span class="addition-tag">➕ Adición</span>` : "";
 
       card.innerHTML = `
@@ -1625,7 +1690,7 @@ function doPost(e) {
           <span class="order-num">${order.num} ${additionTag}</span>
           <span style="display:flex; align-items:center; gap:6px;">
             <span class="status-badge ${order.status}">${statusLabel[order.status]}</span>
-            <button class="btn-delete-order" data-num="${order.num}" aria-label="Eliminar pedido" title="Eliminar pedido">🗑️</button>
+            <button class="btn-delete-order" data-id="${order.id}" aria-label="Eliminar pedido" title="Eliminar pedido">🗑️</button>
           </span>
         </div>
         <p class="order-customer">${order.name}</p>
@@ -1642,23 +1707,29 @@ function doPost(e) {
     wrap.appendChild(rail);
 
     wrap.querySelectorAll(".btn-status").forEach(btn => {
-      btn.addEventListener("click", () => advanceStatus(btn.dataset.num));
+      btn.addEventListener("click", () => advanceStatus(Number(btn.dataset.id)));
     });
     wrap.querySelectorAll(".btn-delete-order").forEach(btn => {
-      btn.addEventListener("click", () => deleteOrder(btn.dataset.num));
+      btn.addEventListener("click", () => deleteOrder(Number(btn.dataset.id)));
     });
   }
 
-  function deleteOrder(num){
-    const order = orders.find(o => o.num === num);
+  async function deleteOrder(id){
+    const order = orders.find(o => o.id === id);
     if(!order) return;
-    if(confirm(`¿Eliminar el pedido ${num} de ${order.name}? Esta acción no se puede deshacer.`)){
-      orders = orders.filter(o => o.num !== num);
-      saveLocalOrders();
-      renderOrders();
-      updateOrdersBadge();
-      renderDelivered();
+    if(!confirm(`¿Eliminar el pedido ${order.num} de ${order.name}? Esta acción no se puede deshacer.`)) return;
+    if(!requireSupabase()) return;
+
+    const { error } = await supabaseClient.from("orders").delete().eq("id", id);
+    if(error){
+      console.error(error);
+      alert("No se pudo eliminar el pedido.");
+      return;
     }
+    orders = orders.filter(o => o.id !== id);
+    renderOrders();
+    updateOrdersBadge();
+    renderDelivered();
   }
 
   function renderDelivered(){
@@ -1706,26 +1777,35 @@ function doPost(e) {
           <td>${destination}</td>
           <td class="delivered-items">${items}</td>
           <td class="delivered-total">${fmt(order.total)}</td>
-          <td><button class="paid-toggle ${paid ? "pagado" : "pendiente"}" data-num="${order.num}">${paid ? "✅ Pagado" : "Marcar pagado"}</button></td>
+          <td><button class="paid-toggle ${paid ? "pagado" : "pendiente"}" data-id="${order.id}">${paid ? "✅ Pagado" : "Marcar pagado"}</button></td>
           <td>${order.notes || "—"}</td>
-          <td><button class="btn-add-more" data-num="${order.num}">+ Agregar</button></td>
+          <td><button class="btn-add-more" data-id="${order.id}">+ Agregar</button></td>
         </tr>
       `;
     }).join("");
 
     tbody.querySelectorAll(".paid-toggle").forEach(btn => {
-      btn.addEventListener("click", () => togglePaid(btn.dataset.num));
+      btn.addEventListener("click", () => togglePaid(Number(btn.dataset.id)));
     });
     tbody.querySelectorAll(".btn-add-more").forEach(btn => {
-      btn.addEventListener("click", () => openAddItemsModal(btn.dataset.num));
+      btn.addEventListener("click", () => openAddItemsModal(Number(btn.dataset.id)));
     });
   }
 
-  function togglePaid(num){
-    const order = orders.find(o => o.num === num);
+  async function togglePaid(id){
+    const order = orders.find(o => o.id === id);
     if(!order) return;
-    order.paid = !order.paid;
-    saveLocalOrders();
+    if(!requireSupabase()) return;
+
+    const { data, error } = await supabaseClient.from("orders")
+      .update({ paid: !order.paid }).eq("id", id).select().single();
+    if(error){
+      console.error(error);
+      alert("No se pudo actualizar el estado de pago.");
+      return;
+    }
+    const idx = orders.findIndex(o => o.id === id);
+    if(idx >= 0) orders[idx] = dbRowToOrder(data);
     renderDelivered();
   }
 
@@ -1786,20 +1866,32 @@ function doPost(e) {
     });
   }
 
-  function toggleAvailability(id){
+  async function toggleAvailability(id){
     const item = itemById(id);
     if(!item) return;
-    item.available = !isAvailable(item);
-    saveLocalMenu();
+    if(!requireSupabase()) return;
+
+    const { data, error } = await supabaseClient.from("menu_items")
+      .update({ available: !isAvailable(item) }).eq("id", id).select().single();
+    if(error){ console.error(error); alert("No se pudo actualizar el producto."); return; }
+
+    const idx = menuData.findIndex(m => m.id === id);
+    if(idx >= 0) menuData[idx] = dbRowToMenuItem(data);
     renderMenuManage();
     renderMenu(); // refleja el cambio de inmediato en "Ordenar"
   }
 
-  function toggleEnabled(id){
+  async function toggleEnabled(id){
     const item = itemById(id);
     if(!item) return;
-    item.enabled = !isEnabled(item);
-    saveLocalMenu();
+    if(!requireSupabase()) return;
+
+    const { data, error } = await supabaseClient.from("menu_items")
+      .update({ enabled: !isEnabled(item) }).eq("id", id).select().single();
+    if(error){ console.error(error); alert("No se pudo actualizar el producto."); return; }
+
+    const idx = menuData.findIndex(m => m.id === id);
+    if(idx >= 0) menuData[idx] = dbRowToMenuItem(data);
     renderMenuManage();
     renderMenu(); // si se deshabilita, desaparece de "Ordenar"; si se habilita, vuelve a aparecer
   }
@@ -1840,7 +1932,7 @@ function doPost(e) {
     addProductOverlay.classList.remove("open");
   });
 
-  $("#btnConfirmAddProduct").addEventListener("click", () => {
+  $("#btnConfirmAddProduct").addEventListener("click", async () => {
     const name = $("#prodName").value.trim();
     const cat = $("#prodCat").value;
     const priceRaw = $("#prodPrice").value.trim().replace(",", ".");
@@ -1857,31 +1949,28 @@ function doPost(e) {
     if(!priceOk) valid = false;
 
     if(!valid) return;
+    if(!requireSupabase()) return;
+
+    const btn = $("#btnConfirmAddProduct");
+    btn.disabled = true;
 
     if(editingProductId !== null){
-      const item = itemById(editingProductId);
-      if(item){
-        item.name = name;
-        item.cat = cat;
-        item.price = price;
-        item.desc = desc;
-        item.icon = icon || "🍽️";
-      }
+      const { data, error } = await supabaseClient.from("menu_items").update({
+        name, cat, price, description: desc, icon: icon || "🍽️"
+      }).eq("id", editingProductId).select().single();
+      btn.disabled = false;
+      if(error){ console.error(error); alert("No se pudo guardar el producto."); return; }
+      const idx = menuData.findIndex(m => m.id === editingProductId);
+      if(idx >= 0) menuData[idx] = dbRowToMenuItem(data);
     } else {
-      const newId = menuData.reduce((max, m) => Math.max(max, m.id), 0) + 1;
-      menuData.push({
-        id: newId,
-        cat,
-        icon: icon || "🍽️",
-        name,
-        desc,
-        price,
-        available: true,
-        enabled: true
-      });
+      const { data, error } = await supabaseClient.from("menu_items").insert({
+        cat, icon: icon || "🍽️", name, description: desc, price, available: true, enabled: true
+      }).select().single();
+      btn.disabled = false;
+      if(error){ console.error(error); alert("No se pudo agregar el producto."); return; }
+      menuData.push(dbRowToMenuItem(data));
     }
 
-    saveLocalMenu();
     renderMenuManage();
     renderMenu(); // los cambios se reflejan de inmediato en "Ordenar"
     addProductOverlay.classList.remove("open");
@@ -1893,8 +1982,8 @@ function doPost(e) {
   let addItemsTarget = null; // referencia al pedido
   let addItemsCart = {}; // id -> qty, solo mientras el modal está abierto
 
-  function openAddItemsModal(num){
-    const order = orders.find(o => o.num === num);
+  function openAddItemsModal(id){
+    const order = orders.find(o => o.id === id);
     if(!order) return;
     addItemsTarget = order;
     addItemsCart = {};
@@ -1952,26 +2041,41 @@ function doPost(e) {
     addItemsOverlay.classList.remove("open");
   });
 
-  $("#btnConfirmAddItems").addEventListener("click", () => {
+  $("#btnConfirmAddItems").addEventListener("click", async () => {
     if(!addItemsTarget) return;
     const addedItems = Object.entries(addItemsCart).map(([id, qty]) => ({...itemById(Number(id)), qty}));
     if(addedItems.length === 0) return;
+    if(!requireSupabase()) return;
     const addedTotal = addedItems.reduce((sum, it) => sum + it.price * it.qty, 0);
 
+    const mergedItems = addItemsTarget.items.map(it => ({...it}));
     addedItems.forEach(added => {
-      const existing = addItemsTarget.items.find(it => it.id === added.id);
+      const existing = mergedItems.find(it => it.id === added.id);
       if(existing){ existing.qty += added.qty; }
-      else { addItemsTarget.items.push({...added}); }
+      else { mergedItems.push({...added}); }
     });
-    addItemsTarget.total += addedTotal;
-    addItemsTarget.paid = false; // el total cambió, vuelve a quedar pendiente de pago
+    const newTotal = addItemsTarget.total + addedTotal;
+
+    const btn = $("#btnConfirmAddItems");
+    btn.disabled = true;
 
     // Esta nueva tanda pasa por cocina (En preparación → Listo) antes de dársela al cliente.
     // Todavía NO se envía a Google Sheets: eso ocurre recién cuando se marque "Entregado".
-    addItemsTarget.currentBatch = { items: addedItems, total: addedTotal };
-    addItemsTarget.status = "preparando";
+    const { data, error } = await supabaseClient.from("orders").update({
+      items: mergedItems,
+      total: newTotal,
+      paid: false, // el total cambió, vuelve a quedar pendiente de pago
+      current_batch: { items: addedItems, total: addedTotal },
+      status: "preparando"
+    }).eq("id", addItemsTarget.id).select().single();
 
-    saveLocalOrders();
+    btn.disabled = false;
+    if(error){ console.error(error); alert("No se pudieron agregar los productos."); return; }
+
+    const updated = dbRowToOrder(data);
+    const idx = orders.findIndex(o => o.id === updated.id);
+    if(idx >= 0) orders[idx] = updated;
+
     renderDelivered();
     renderOrders();
     updateOrdersBadge();
@@ -1980,48 +2084,63 @@ function doPost(e) {
     setView("pedidos"); // el pedido vuelve a la cocina, mostrémoslo de una vez
   });
 
-  function advanceStatus(num){
-    const order = orders.find(o => o.num === num);
+  async function advanceStatus(id){
+    const order = orders.find(o => o.id === id);
     if(!order || !nextStatus[order.status]) return;
-    order.status = nextStatus[order.status];
+    if(!requireSupabase()) return;
 
-    if(order.status === "entregado"){
-      const isFirstDelivery = !order.everDelivered;
-      order.everDelivered = true;
-      const batch = order.currentBatch;
-      if(batch && batch.items && batch.items.length){
-        sendOrderToSheet({
-          num: isFirstDelivery ? order.num : (order.num + " (+)"),
-          name: order.name,
-          type: order.type,
-          table: order.table,
-          items: batch.items,
-          total: batch.total,
-          notes: isFirstDelivery ? order.notes : "Productos agregados después de la entrega"
-        });
-      }
-      order.currentBatch = null;
+    const newStatus = nextStatus[order.status];
+    const updateFields = { status: newStatus };
+    let isFirstDelivery = false;
+    let batchToSend = null;
+
+    if(newStatus === "entregado"){
+      isFirstDelivery = !order.everDelivered;
+      updateFields.ever_delivered = true;
+      batchToSend = order.currentBatch;
+      updateFields.current_batch = null;
     }
 
-    saveLocalOrders();
+    const { data, error } = await supabaseClient.from("orders")
+      .update(updateFields).eq("id", id).select().single();
+    if(error){ console.error(error); alert("No se pudo actualizar el pedido."); return; }
+
+    const updated = dbRowToOrder(data);
+    const idx = orders.findIndex(o => o.id === id);
+    if(idx >= 0) orders[idx] = updated;
+
+    if(newStatus === "entregado" && batchToSend && batchToSend.items && batchToSend.items.length){
+      sendOrderToSheet({
+        num: isFirstDelivery ? updated.num : (updated.num + " (+)"),
+        name: updated.name,
+        type: updated.type,
+        table: updated.table,
+        items: batchToSend.items,
+        total: batchToSend.total,
+        notes: isFirstDelivery ? updated.notes : "Productos agregados después de la entrega"
+      });
+    }
+
     renderOrders();
     updateOrdersBadge();
     renderDelivered();
   }
 
-  $("#btnClearDelivered").addEventListener("click", () => {
+  $("#btnClearDelivered").addEventListener("click", async () => {
     const deliveredCount = orders.filter(o => o.status === "entregado").length;
+    if(deliveredCount === 0) return;
+    if(!confirm(`¿Eliminar ${deliveredCount} pedido(s) entregado(s) del historial?`)) return;
+    if(!requireSupabase()) return;
 
-    if(deliveredCount === 0){
+    const { error } = await supabaseClient.from("orders").delete().eq("status", "entregado");
+    if(error){
+      console.error(error);
+      alert("No se pudo limpiar el historial.");
       return;
     }
-
-    if(confirm(`¿Eliminar ${deliveredCount} pedido(s) entregado(s) del historial?`)){
-      orders = orders.filter(o => o.status !== "entregado");
-      saveLocalOrders();
-      updateOrdersBadge();
-      renderDelivered();
-    }
+    orders = orders.filter(o => o.status !== "entregado");
+    updateOrdersBadge();
+    renderDelivered();
   });
 
   // refresca los "hace X min" cada minuto si la vista está abierta
@@ -2224,15 +2343,43 @@ function doPost(e) {
     }
 
     if(!valid) return;
+    if(!requireSupabase()) return;
 
-    orderCounter++;
-    const orderNum = "#" + String(orderCounter).padStart(3, "0");
     const items = Object.entries(cart).map(([id, qty]) => ({...itemById(Number(id)), qty}));
     const total = cartTotal();
     const estMin = 12 + cartCount() * 2;
 
+    const sendBtn = $("#btnConfirmOrder");
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Enviando...";
+
+    const { data, error } = await supabaseClient.from("orders").insert({
+      customer_name: name,
+      order_type: isMesa ? "mesa" : "llevar",
+      table_number: isMesa ? table : null,
+      notes,
+      items,
+      total,
+      status: "preparando",
+      paid: false,
+      ever_delivered: false,
+      current_batch: { items, total, notes }
+    }).select().single();
+
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Confirmar pedido";
+
+    if(error){
+      console.error(error);
+      alert("No se pudo enviar el pedido. Revisá tu conexión a Supabase e intentá de nuevo.");
+      return;
+    }
+
+    const newOrder = dbRowToOrder(data);
+    orders.push(newOrder);
+
     // Build confirmation
-    $("#confirmNum").textContent = orderNum;
+    $("#confirmNum").textContent = newOrder.num;
     const list = $("#confirmList");
     list.innerHTML = "";
     items.forEach(it => {
@@ -2257,21 +2404,6 @@ function doPost(e) {
       <strong>Tiempo estimado:</strong> ${estMin}–${estMin + 5} minutos
     `;
 
-    orders.push({
-      num: orderNum,
-      name,
-      type: isMesa ? "mesa" : "llevar",
-      table,
-      notes,
-      items,
-      total,
-      time: new Date(),
-      status: "preparando",
-      paid: false,
-      everDelivered: false,
-      currentBatch: { items, total, notes }
-    });
-    saveLocalOrders();
     updateOrdersBadge();
     if(activeView === "pedidos") renderOrders();
     renderDelivered();
@@ -2297,12 +2429,30 @@ function doPost(e) {
   });
 
   // ---------------- INIT ----------------
-  loadLocalMenu();
-  loadLocalOrders();
-  renderTabs();
-  renderMenu();
-  renderCart();
-  loadSettings();
+  async function initApp(){
+    if(!isSupabaseConfigured()){
+      showConfigBanner();
+      renderTabs();
+      renderMenu();
+      renderCart();
+      loadSettings();
+      return;
+    }
+
+    $("#menuGrid").innerHTML = `<p class="manage-empty" style="grid-column:1/-1;">Cargando menú...</p>`;
+    $("#ordersContent").innerHTML = `<p class="orders-empty">Cargando pedidos...</p>`;
+
+    await Promise.all([loadMenuFromSupabase(), loadOrdersFromSupabase()]);
+
+    renderTabs();
+    renderMenu();
+    renderCart();
+    updateOrdersBadge();
+    renderDelivered();
+    loadSettings();
+    subscribeRealtime();
+  }
+  initApp();
 </script>
 </body>
 </html>
