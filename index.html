@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Comedor Doña Chelo — Pedidos</title>
+<title>Comedor El Jornalero — Pedidos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -600,7 +600,8 @@
     top:-11px;
     width:62px;
     height:20px;
-    left:var(--tape-x, 24px);
+    left:50%;
+    margin-left:-31px;
     transform:rotate(var(--tape-rot, -5deg));
     background:linear-gradient(120deg, rgba(232,169,59,.92), rgba(232,169,59,.62));
     box-shadow:0 2px 3px rgba(0,0,0,.25);
@@ -778,6 +779,10 @@
   }
   .ticket-total .label{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#5b5346;}
   .ticket-total .amount{font-size:22px; font-weight:700;}
+  .ticket-meta{padding:0 18px 6px; font-family:'Space Mono', monospace; font-size:12px; color:#5b5346; line-height:1.5;}
+  .ticket-meta .shop{font-weight:700; color:var(--tinta); font-size:13px;}
+  .ticket-form{padding:10px 18px 0;}
+  .ticket-form .form-group{margin-bottom:10px;}
   .ticket-footer{padding:14px 18px 18px;}
   .btn-send{
     width:100%;
@@ -1034,7 +1039,7 @@
 
   <header>
     <p class="eyebrow">Pedidos para hoy</p>
-    <h1>Comedor Doña Chelo</h1>
+    <h1>Comedor El Jornalero</h1>
     <p class="tagline">Comida casera, como en casa</p>
     <div class="meta-row">
       <span id="fechaHoy">—</span>
@@ -1063,7 +1068,39 @@
           <span class="ticket-title">Tu comanda</span>
           <button class="ticket-close" id="ticketClose" aria-label="Cerrar comanda">✕</button>
         </div>
+        <div class="ticket-meta">
+          <div class="shop">Comedor El Jornalero</div>
+          <div id="ticketUser" hidden></div>
+          <div id="ticketDate"></div>
+        </div>
         <div class="ticket-body" id="ticketBody"></div>
+        <div class="ticket-form">
+          <div class="form-group">
+            <label for="custName">Nombre del cliente</label>
+            <input type="text" id="custName" placeholder="¿A nombre de quién?">
+            <p class="error-text" id="errName">Escribí el nombre para continuar.</p>
+          </div>
+          <div class="form-group">
+            <label>¿Cómo lo quieren?</label>
+            <div class="radio-group">
+              <label class="radio-option selected" id="optMesa">
+                <input type="radio" name="orderType" value="mesa" checked> Para mesa
+              </label>
+              <label class="radio-option" id="optLlevar">
+                <input type="radio" name="orderType" value="llevar"> Para llevar
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="tableGroup">
+            <label for="tableNumber">Número de mesa</label>
+            <input type="text" id="tableNumber" placeholder="Ej. 4">
+            <p class="error-text" id="errTable">Indicá el número de mesa.</p>
+          </div>
+          <div class="form-group">
+            <label for="notes">Notas (opcional)</label>
+            <textarea id="notes" placeholder="Sin cebolla, poco picante, etc."></textarea>
+          </div>
+        </div>
         <div class="ticket-total">
           <span class="label">Total</span>
           <span class="amount" id="ticketTotal">Q0</span>
@@ -1127,50 +1164,9 @@
   </button>
   <div class="sheet-overlay" id="sheetOverlay"></div>
 
-  <footer>Hecho con cariño en la cocina de Doña Chelo</footer>
+  <footer>Hecho con cariño en la cocina de El Jornalero</footer>
 
   <!-- CHECKOUT MODAL -->
-  <div class="modal-overlay" id="checkoutOverlay">
-    <div class="modal">
-      <h2>Un último paso</h2>
-      <p class="sub">Contános a quién y adónde llevamos tu pedido.</p>
-
-      <div class="form-group">
-        <label for="custName">Nombre</label>
-        <input type="text" id="custName" placeholder="¿A nombre de quién?">
-        <p class="error-text" id="errName">Escribí tu nombre para continuar.</p>
-      </div>
-
-      <div class="form-group">
-        <label>¿Cómo lo querés?</label>
-        <div class="radio-group">
-          <label class="radio-option selected" id="optMesa">
-            <input type="radio" name="orderType" value="mesa" checked> Para mesa
-          </label>
-          <label class="radio-option" id="optLlevar">
-            <input type="radio" name="orderType" value="llevar"> Para llevar
-          </label>
-        </div>
-      </div>
-
-      <div class="form-group" id="tableGroup">
-        <label for="tableNumber">Número de mesa</label>
-        <input type="text" id="tableNumber" placeholder="Ej. 4">
-        <p class="error-text" id="errTable">Indicá el número de mesa.</p>
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Notas (opcional)</label>
-        <textarea id="notes" placeholder="Sin cebolla, poco picante, etc."></textarea>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn-secondary" id="btnCancelCheckout">Volver</button>
-        <button class="btn-primary" id="btnConfirmOrder">Confirmar pedido</button>
-      </div>
-    </div>
-  </div>
-
   <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settingsOverlay">
     <div class="modal">
@@ -1181,7 +1177,7 @@
         <label>1. Creá una hoja nueva en Google Sheets, abrí Extensiones → Apps Script, borrá lo que haya y pegá esto:</label>
         <textarea id="appsScriptCode" readonly rows="9">function doGet() {
   return ContentService
-    .createTextOutput("Comedor Doña Chelo - conexión OK");
+    .createTextOutput("Comedor El Jornalero - conexión OK");
 }
 
 function doPost(e) {
@@ -2327,19 +2323,11 @@ function doPost(e) {
   sheetOverlay.addEventListener("click", closeSheet);
 
   // ---------------- CHECKOUT MODAL ----------------
-  const checkoutOverlay = $("#checkoutOverlay");
   const confirmOverlay = $("#confirmOverlay");
   const tableGroup = $("#tableGroup");
   const optMesa = $("#optMesa");
   const optLlevar = $("#optLlevar");
 
-  $("#btnSend").addEventListener("click", () => {
-    closeSheet();
-    checkoutOverlay.classList.add("open");
-  });
-  $("#btnCancelCheckout").addEventListener("click", () => {
-    checkoutOverlay.classList.remove("open");
-  });
 
   [optMesa, optLlevar].forEach(opt => {
     opt.addEventListener("click", () => {
@@ -2349,7 +2337,7 @@ function doPost(e) {
     });
   });
 
-  $("#btnConfirmOrder").addEventListener("click", async () => {
+  $("#btnSend").addEventListener("click", async () => {
     const name = $("#custName").value.trim();
     const isMesa = optMesa.querySelector("input").checked;
     const table = $("#tableNumber").value.trim();
@@ -2373,7 +2361,7 @@ function doPost(e) {
     const total = cartTotal();
     const estMin = 12 + cartCount() * 2;
 
-    const sendBtn = $("#btnConfirmOrder");
+    const sendBtn = $("#btnSend");
     sendBtn.disabled = true;
     sendBtn.textContent = "Enviando...";
 
@@ -2391,7 +2379,7 @@ function doPost(e) {
     }).select().single();
 
     sendBtn.disabled = false;
-    sendBtn.textContent = "Confirmar pedido";
+    sendBtn.textContent = "Enviar comanda a cocina";
 
     if(error){
       console.error(error);
@@ -2432,7 +2420,7 @@ function doPost(e) {
     if(activeView === "pedidos") renderOrders();
     renderDelivered();
 
-    checkoutOverlay.classList.remove("open");
+    closeSheet();
     $("#confirmOverlay .confirm-sub").textContent = sheetsWebhookUrl
       ? "Pedido en camino a cocina. Se registrará en Google Sheets cuando esté listo y entregado."
       : "Pedido en camino a cocina. Conectá Google Sheets desde ⚙️ si querés llevar el registro ahí.";
@@ -2455,7 +2443,22 @@ function doPost(e) {
   // ---------------- USUARIOS (Supabase Auth) ----------------
   const loginOverlay = $("#loginOverlay");
 
+  function updateTicketMeta(){
+    const u = $("#ticketUser");
+    if(currentUser){
+      const md = currentUser.user_metadata || {};
+      u.textContent = "Atiende: " + (md.nombre || md.name || md.full_name || currentUser.email);
+      u.hidden = false;
+    } else { u.hidden = true; }
+    $("#ticketDate").textContent = new Date().toLocaleString("es-GT", {
+      day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false
+    });
+  }
+  setInterval(updateTicketMeta, 30000);
+  updateTicketMeta();
+
   function applyAuthUI(){
+    updateTicketMeta();
     document.querySelectorAll(".staff-tab").forEach(b => b.hidden = !currentUser);
     $("#btnAuth").textContent = currentUser ? "🚪 Salir" : "🔐 Ingresar";
     if(!currentUser && activeView !== "ordenar") setView("ordenar");
