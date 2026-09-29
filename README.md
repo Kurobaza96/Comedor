@@ -1,2 +1,2 @@
-# Comedor
+# Comedor El Jornalero
 Tomar pedido
